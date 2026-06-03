@@ -1,5 +1,3 @@
-import { generateId } from './id';
-
 export const COLORS = {
   primary: '#FF6F00',
   primaryLight: '#FFA040',
@@ -11,6 +9,20 @@ export const COLORS = {
   success: '#16A34A',
   border: '#E5E7EB',
 };
+
+export const DARK_COLORS: typeof COLORS = {
+  primary: '#FF8F00',
+  primaryLight: '#FFB74D',
+  background: '#121212',
+  card: '#1E1E2E',
+  text: '#E0E0E0',
+  textSecondary: '#A0A0A0',
+  danger: '#EF5350',
+  success: '#4CAF50',
+  border: '#333344',
+};
+
+export const TOAST_DURATION = 2500;
 
 export const STORAGE_KEYS = {
   poojas: '@pandit-assist/poojas',

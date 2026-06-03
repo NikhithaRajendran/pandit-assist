@@ -14,8 +14,12 @@ for (const [key, val] of Object.entries(termDictionary)) {
   termDictLower[key.toLowerCase()] = val;
 }
 for (const [en, { ta, hi }] of Object.entries(seedNameTranslations)) {
-  reverseLookup[ta] = en;
-  reverseLookup[hi] = en;
+  for (const variant of ta.split(' / ')) {
+    reverseLookup[variant.trim()] = en;
+  }
+  for (const variant of hi.split(' / ')) {
+    reverseLookup[variant.trim()] = en;
+  }
 }
 
 function hasTamil(text: string): boolean {
@@ -85,9 +89,12 @@ export function getNamesForEdit(trimmed: string): {
     return { nameEn: key, nameTa: entry.ta, nameHi: entry.hi };
   }
 
-  const suffixTa = transliterate(suffix, 'tamil');
-  const suffixHi = transliterate(suffix, 'devanagari');
-  const suffixEn = transliterate(suffix, 'itrans');
+  const suffixLower = suffix.toLowerCase();
+  const suffixDict = termDictLower[suffixLower];
+
+  const suffixTa = suffixDict ? suffixDict.ta : transliterate(suffix, 'tamil');
+  const suffixHi = suffixDict ? suffixDict.hi : transliterate(suffix, 'devanagari');
+  const suffixEn = suffixDict ? suffix : transliterate(suffix, 'itrans');
 
   return {
     nameEn: suffixEn !== suffix ? `${key} ${suffixEn}` : `${key} ${suffix}`,

@@ -36,6 +36,7 @@ const ta: TranslationMap = {
   'poojaDetail.discardMessage': 'நீங்கள் சேமிக்கப்படாத அளவுகளை உள்ளிட்டுள்ளீர்கள்.',
   'poojaDetail.discard': 'நிராகரி',
   'poojaDetail.noSelection': 'குறைந்தது ஒரு உருப்படியையாவது தேர்ந்தெடுக்கவும்',
+  'poojaDetail.clearAll': 'அனைத்தையும் அழி',
   'poojaDetail.greetingLabel': 'வாழ்த்து',
   'poojaDetail.messageLabel': 'செய்தி முன்னோட்டம்',
 
@@ -68,6 +69,8 @@ const ta: TranslationMap = {
 
   'alert.deleteTitle': 'உருப்படியை நீக்கவா?',
   'alert.deleteMessage': 'நீங்கள் "{name}" ஐ நிச்சயமாக நீக்க விரும்புகிறீர்களா?',
+  'alert.deletePoojaTitle': 'பூஜையை நீக்கவா?',
+  'alert.deletePoojaMessage': 'நீங்கள் "{name}" மற்றும் அதன் அனைத்து உருப்படிகளையும் நிச்சயமாக நீக்க விரும்புகிறீர்களா?',
   'alert.clearTitle': 'பட்டியலை அழிக்கவா?',
   'alert.clearMessage': 'இது அனைத்து உருப்படிகளையும் அகற்றும்.',
   'alert.deleteConfirm': 'நீக்கு',
@@ -87,6 +90,10 @@ const ta: TranslationMap = {
   'toast.listCleared': 'பட்டியல் அழிக்கப்பட்டது',
 
   'settings.managePoojas': 'பூஜைகளை நிர்வகிக்கவும்',
+
+  'error.title': 'ஏதோ தவறு ஏற்பட்டது',
+  'error.unknown': 'எதிர்பாராத பிழை ஏற்பட்டது',
+  'error.retry': 'மீண்டும் முயற்சிக்கவும்',
 };
 
 export default ta;

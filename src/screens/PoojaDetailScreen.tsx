@@ -5,7 +5,6 @@ import {
   Keyboard,
   Linking,
   Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -21,7 +20,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { SessionItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n';
-import { COLORS } from '../utils/constants';
+import { useColors } from '../utils/useColors';
 import { loadLastGreeting, saveLastGreeting } from '../utils/storage';
 import type { RootStackParamList } from '../../App';
 
@@ -30,11 +29,13 @@ type Route = RouteProp<RootStackParamList, 'PoojaDetail'>;
 
 export default function PoojaDetailScreen() {
   const { getPoojaItems, showToast, poojas } = useApp();
-  const { t, getName, language } = useLanguage();
+  const { t, getName } = useLanguage();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { poojaId, poojaName } = route.params;
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const pooja = useMemo(() => poojas.find((p) => p.id === poojaId), [poojas, poojaId]);
 
@@ -95,6 +96,17 @@ export default function PoojaDetailScreen() {
     [sessionItems],
   );
 
+  const hasAnyQuantity = useMemo(
+    () => sessionItems.some((i) => i.quantity.trim().length > 0),
+    [sessionItems],
+  );
+
+  const clearAllQuantities = useCallback(() => {
+    setSessionItems((prev) =>
+      prev.map((i) => ({ ...i, quantity: '' })),
+    );
+  }, []);
+
   const toggleAll = useCallback(() => {
     setSessionItems((prev) =>
       prev.map((i) => ({ ...i, isRequired: !allChecked })),
@@ -140,6 +152,7 @@ export default function PoojaDetailScreen() {
   );
 
   const openShareModal = useCallback(() => {
+    Keyboard.dismiss();
     if (!shareEnabled) {
       showToast(t('poojaDetail.noSelection'), 'error');
       return;
@@ -180,7 +193,7 @@ export default function PoojaDetailScreen() {
     <View style={styles.headerSection}>
       {sessionItems.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons name="cube-outline" size={36} color={COLORS.textSecondary} />
+          <Ionicons name="cube-outline" size={36} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>{t('poojaDetail.noItemsTitle')}</Text>
           <Text style={styles.emptySubtitle}>{t('poojaDetail.noItemsSubtitle')}</Text>
           <TouchableOpacity
@@ -188,22 +201,42 @@ export default function PoojaDetailScreen() {
             onPress={() =>
               navigation.navigate('PoojaItemsConfig', { poojaId, poojaName: pooja?.nameEn || poojaName })
             }
+            accessibilityRole="button"
+            accessibilityLabel={t('poojaDetail.addItems')}
           >
             <Text style={styles.addItemsBtnLabel}>{t('poojaDetail.addItems')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
-          <TouchableOpacity style={styles.toggleAllBtn} onPress={toggleAll}>
-            <Ionicons
-              name={allChecked ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={COLORS.primary}
-            />
-            <Text style={styles.toggleAllText}>
-              {allChecked ? t('poojaDetail.deselectAll') : t('poojaDetail.selectAll')}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.toggleAllBtn}
+              onPress={toggleAll}
+              accessibilityRole="button"
+              accessibilityLabel={allChecked ? t('poojaDetail.deselectAll') : t('poojaDetail.selectAll')}
+            >
+              <Ionicons
+                name={allChecked ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={styles.toggleAllText}>
+                {allChecked ? t('poojaDetail.deselectAll') : t('poojaDetail.selectAll')}
+              </Text>
+            </TouchableOpacity>
+            {hasAnyQuantity && (
+              <TouchableOpacity
+                style={styles.clearAllBtn}
+                onPress={clearAllQuantities}
+                accessibilityRole="button"
+                accessibilityLabel="Clear all quantities"
+              >
+                <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
+                <Text style={styles.clearAllText}>{t('poojaDetail.clearAll')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={styles.hint}>{t('poojaDetail.checkItemsHint')}</Text>
         </>
       )}
@@ -214,11 +247,17 @@ export default function PoojaDetailScreen() {
 
   const renderItem = ({ item }: { item: SessionItem }) => (
     <View style={styles.itemRow}>
-      <TouchableOpacity onPress={() => toggleItem(item.id)} style={styles.checkArea}>
+      <TouchableOpacity
+        onPress={() => toggleItem(item.id)}
+        style={styles.checkArea}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: item.isRequired }}
+        accessibilityLabel={getName(item)}
+      >
         <Ionicons
           name={item.isRequired ? 'checkbox' : 'square-outline'}
           size={22}
-          color={item.isRequired ? COLORS.primary : COLORS.textSecondary}
+          color={item.isRequired ? colors.primary : colors.textSecondary}
         />
       </TouchableOpacity>
       <Text style={styles.itemName} numberOfLines={1}>
@@ -227,7 +266,7 @@ export default function PoojaDetailScreen() {
       <TextInput
         style={styles.qtyInput}
         placeholder={t('poojaDetail.qtyPlaceholder')}
-        placeholderTextColor={COLORS.border}
+        placeholderTextColor={colors.border}
         value={item.quantity}
         onChangeText={(text) => updateQuantity(item.id, text)}
         returnKeyType="done"
@@ -237,29 +276,15 @@ export default function PoojaDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      {Platform.OS === 'ios' ? (
-        <View style={{ flex: 1 }}>
-          <FlatList
-            data={sessionItems}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            ListHeaderComponent={listHeader}
-            ListFooterComponent={listFooter}
-            contentContainerStyle={styles.listContent}
-            keyboardShouldPersistTaps="handled"
-          />
-        </View>
-      ) : (
-        <FlatList
-          data={sessionItems}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          ListHeaderComponent={listHeader}
-          ListFooterComponent={listFooter}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
+      <FlatList
+        data={sessionItems}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+      />
 
       {!keyboardVisible && (
         <View style={[styles.shareWrapper, { paddingBottom: insets.bottom + 8 }]}>
@@ -267,6 +292,9 @@ export default function PoojaDetailScreen() {
             style={[styles.shareBtn, !shareEnabled && styles.shareBtnDisabled]}
             onPress={openShareModal}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !shareEnabled }}
+            accessibilityLabel={t('poojaDetail.shareButton', { name: pooja ? getName(pooja) : poojaName })}
           >
             <Ionicons name="logo-whatsapp" size={20} color="#fff" />
             <Text style={styles.shareBtnText}>
@@ -292,7 +320,7 @@ export default function PoojaDetailScreen() {
               value={greeting}
               onChangeText={handleGreetingChange}
               placeholder={t('share.greeting')}
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <Text style={styles.shareLabel}>{t('poojaDetail.messageLabel')}</Text>
@@ -308,10 +336,12 @@ export default function PoojaDetailScreen() {
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setShareModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.cancel')}
               >
                 <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.sendBtn} onPress={handleSendWhatsApp}>
+              <TouchableOpacity style={styles.sendBtn} onPress={handleSendWhatsApp} accessibilityRole="button" accessibilityLabel={t('common.save')}>
                 <Ionicons name="logo-whatsapp" size={18} color="#fff" />
                 <Text style={styles.sendBtnText}>{t('common.save')}</Text>
               </TouchableOpacity>
@@ -323,12 +353,17 @@ export default function PoojaDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (c: ReturnType<typeof useColors>) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
   listContent: { paddingHorizontal: 16, paddingTop: 12 },
 
   headerSection: { paddingBottom: 8 },
 
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   toggleAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -336,17 +371,25 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
-  toggleAllText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
-  hint: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 8, marginLeft: 4 },
+  toggleAllText: { fontSize: 15, fontWeight: '600', color: c.primary },
+  clearAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  clearAllText: { fontSize: 14, color: c.danger },
+  hint: { fontSize: 13, color: c.textSecondary, marginBottom: 8, marginLeft: 4 },
 
   emptyCard: {
     alignItems: 'center',
     paddingVertical: 40,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginTop: 12 },
-  emptySubtitle: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: c.text, marginTop: 12 },
+  emptySubtitle: { fontSize: 14, color: c.textSecondary, textAlign: 'center', marginTop: 4 },
   addItemsBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -357,27 +400,27 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
   checkArea: { paddingRight: 8, paddingVertical: 4 },
-  itemName: { flex: 1, fontSize: 16, color: COLORS.text, marginRight: 8, flexShrink: 1 },
+  itemName: { flex: 1, fontSize: 16, color: c.text, marginRight: 8, flexShrink: 1 },
   qtyInput: {
     width: 100,
     maxWidth: 120,
     height: 40,
     paddingVertical: 0,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     borderRadius: 6,
     paddingHorizontal: 8,
     fontSize: 15,
-    color: COLORS.text,
+    color: c.text,
     textAlign: 'right',
     lineHeight: 18,
   },
@@ -389,7 +432,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 8,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
   },
   shareBtn: {
     flexDirection: 'row',
@@ -405,7 +448,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  shareBtnDisabled: { backgroundColor: COLORS.textSecondary, opacity: 0.6 },
+  shareBtnDisabled: { backgroundColor: c.textSecondary, opacity: 0.6 },
   shareBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   shareModalBackdrop: {
@@ -414,39 +457,39 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   shareModal: {
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
-  shareModalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+  shareModalTitle: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 12 },
   shareLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: c.textSecondary,
     marginBottom: 4,
     marginTop: 8,
   },
   greetingInput: {
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     paddingHorizontal: 12,
     height: 44,
     fontSize: 16,
-    color: COLORS.text,
+    color: c.text,
   },
   previewInput: {
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     borderRadius: 8,
     padding: 12,
     minHeight: 140,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     fontSize: 14,
-    color: COLORS.text,
+    color: c.text,
     lineHeight: 20,
     textAlignVertical: 'top',
   },
@@ -462,9 +505,9 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
-  cancelBtnText: { fontSize: 16, color: COLORS.textSecondary, fontWeight: '600' },
+  cancelBtnText: { fontSize: 16, color: c.textSecondary, fontWeight: '600' },
   sendBtn: {
     flex: 1,
     flexDirection: 'row',

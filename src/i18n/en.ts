@@ -36,6 +36,7 @@ const en: TranslationMap = {
   'poojaDetail.discardMessage': 'You have unsaved quantities.',
   'poojaDetail.discard': 'Discard',
   'poojaDetail.noSelection': 'Select at least one item',
+  'poojaDetail.clearAll': 'Clear All',
   'poojaDetail.greetingLabel': 'Greeting',
   'poojaDetail.messageLabel': 'Message Preview',
 
@@ -68,6 +69,8 @@ const en: TranslationMap = {
 
   'alert.deleteTitle': 'Delete Item?',
   'alert.deleteMessage': 'Are you sure you want to delete "{name}"?',
+  'alert.deletePoojaTitle': 'Delete Pooja?',
+  'alert.deletePoojaMessage': 'Are you sure you want to delete "{name}" and all its items?',
   'alert.clearTitle': 'Clear List?',
   'alert.clearMessage': 'This will remove all items.',
   'alert.deleteConfirm': 'Delete',
@@ -87,6 +90,10 @@ const en: TranslationMap = {
   'toast.listCleared': 'List cleared',
 
   'settings.managePoojas': 'Manage Poojas',
+
+  'error.title': 'Something went wrong',
+  'error.unknown': 'An unexpected error occurred',
+  'error.retry': 'Retry',
 };
 
 export default en;

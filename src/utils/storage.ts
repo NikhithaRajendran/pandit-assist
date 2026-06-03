@@ -16,10 +16,13 @@ export async function loadPoojas(): Promise<Pooja[]> {
   return [];
 }
 
-export async function savePoojas(items: Pooja[]): Promise<void> {
+export async function savePoojas(items: Pooja[]): Promise<boolean> {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.poojas, JSON.stringify(items));
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function loadPoojaItems(): Promise<Record<string, PoojaItem[]>> {
@@ -35,10 +38,13 @@ export async function loadPoojaItems(): Promise<Record<string, PoojaItem[]>> {
 
 export async function savePoojaItems(
   items: Record<string, PoojaItem[]>,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.poojaItems, JSON.stringify(items));
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function seedIfEmpty(): Promise<{

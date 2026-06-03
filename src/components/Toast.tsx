@@ -1,43 +1,50 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
-import { COLORS } from '../utils/constants';
+import { TOAST_DURATION } from '../utils/constants';
+import { useColors } from '../utils/useColors';
 
 export default function Toast() {
   const { toast } = useApp();
   const opacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
-    if (toast) {
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.delay(2000),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      opacity.setValue(0);
-    }
+    opacity.setValue(0);
+    if (!toast) return;
+
+    const fadeDuration = TOAST_DURATION * 0.1;
+    const holdDuration = TOAST_DURATION * 0.8;
+
+    const anim = Animated.sequence([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: fadeDuration,
+        useNativeDriver: true,
+      }),
+      Animated.delay(holdDuration),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: fadeDuration,
+        useNativeDriver: true,
+      }),
+    ]);
+    anim.start();
+    return () => anim.stop();
   }, [toast, opacity]);
 
   if (!toast) return null;
 
   const bgColor =
     toast.type === 'success'
-      ? COLORS.success
+      ? colors.success
       : toast.type === 'error'
-      ? COLORS.danger
-      : COLORS.textSecondary;
+      ? colors.danger
+      : colors.textSecondary;
 
   return (
     <Animated.View
@@ -57,7 +64,7 @@ export default function Toast() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (_c: ReturnType<typeof useColors>) => StyleSheet.create({
   container: {
     position: 'absolute',
     zIndex: 9999,

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { COLORS } from '../utils/constants';
-import { useLanguage, LANGUAGES, getLanguageLabel, Language } from '../i18n';
+import { useColors } from '../utils/useColors';
+import { useLanguage, LANGUAGES, Language } from '../i18n';
 import type { RootStackParamList } from '../../App';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'LanguageSettings'>;
@@ -19,6 +19,8 @@ export default function LanguageSettingsScreen({ onComplete }: Props) {
   const { language, setLanguage, t } = useLanguage();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleSelect = async (code: typeof language) => {
     await setLanguage(code);
@@ -42,6 +44,9 @@ export default function LanguageSettingsScreen({ onComplete }: Props) {
               style={[styles.row, selected && styles.rowSelected]}
               onPress={() => handleSelect(lang.code)}
               activeOpacity={0.7}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={lang.nativeName}
             >
               <View style={styles.radio}>
                 {selected && <View style={styles.radioInner} />}
@@ -50,7 +55,7 @@ export default function LanguageSettingsScreen({ onComplete }: Props) {
                 {lang.nativeName}
               </Text>
               {selected && (
-                <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
               )}
             </TouchableOpacity>
           );
@@ -61,6 +66,8 @@ export default function LanguageSettingsScreen({ onComplete }: Props) {
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.done')}
         >
           <Text style={styles.backBtnText}>{t('common.done')}</Text>
         </TouchableOpacity>
@@ -73,6 +80,8 @@ export function LanguagePickerModal({ onComplete }: { onComplete: () => void }) 
   const { setLanguage } = useLanguage();
   const [selected, setSelected] = useState<Language>('en');
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleContinue = async () => {
     await setLanguage(selected);
@@ -95,6 +104,9 @@ export function LanguagePickerModal({ onComplete }: { onComplete: () => void }) 
               style={[styles.row, isSel && styles.rowSelected]}
               onPress={() => setSelected(lang.code)}
               activeOpacity={0.7}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSel }}
+              accessibilityLabel={lang.nativeName}
             >
               <View style={styles.radio}>
                 {isSel && <View style={styles.radioInner} />}
@@ -103,36 +115,36 @@ export function LanguagePickerModal({ onComplete }: { onComplete: () => void }) 
                 {lang.nativeName}
               </Text>
               {isSel && (
-                <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
               )}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
+      <TouchableOpacity style={styles.continueBtn} onPress={handleContinue} accessibilityRole="button" accessibilityLabel={btnLabel}>
         <Text style={styles.continueBtnText}>{btnLabel}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ReturnType<typeof useColors>) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     paddingHorizontal: 24,
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     paddingHorizontal: 24,
     justifyContent: 'center',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLORS.text,
+    color: c.text,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -142,22 +154,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
   rowSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: '#FFF3E0',
+    borderColor: c.primary,
+    backgroundColor: c.primary + '18',
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: COLORS.textSecondary,
+    borderColor: c.textSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -166,22 +178,22 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.primary,
   },
   label: {
     flex: 1,
     fontSize: 18,
-    color: COLORS.text,
+    color: c.text,
     fontWeight: '500',
   },
   labelSelected: {
-    color: COLORS.primary,
+    color: c.primary,
     fontWeight: '700',
   },
   backBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     height: 50,
     marginTop: 32,
@@ -190,7 +202,7 @@ const styles = StyleSheet.create({
   continueBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     height: 50,
     marginTop: 32,

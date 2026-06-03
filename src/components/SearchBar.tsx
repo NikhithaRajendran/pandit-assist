@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../utils/constants';
+import { useColors } from '../utils/useColors';
 
 type Props = {
   placeholder?: string;
@@ -16,6 +16,8 @@ export default function SearchBar({
 }: Props) {
   const [value, setValue] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleChange = useCallback(
     (text: string) => {
@@ -28,44 +30,47 @@ export default function SearchBar({
 
   return (
     <View style={styles.container}>
-      <Ionicons name="search" size={18} color={COLORS.textSecondary} style={styles.icon} />
+      <Ionicons name="search" size={18} color={colors.textSecondary} style={styles.icon} />
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.textSecondary}
+        placeholderTextColor={colors.textSecondary}
         value={value}
         onChangeText={handleChange}
         autoCorrect={false}
         returnKeyType="search"
+        accessibilityRole="search"
+        accessibilityLabel={placeholder}
       />
       {value.length > 0 && (
-        <Ionicons
-          name="close-circle"
-          size={18}
-          color={COLORS.textSecondary}
+        <TouchableOpacity
           onPress={() => handleChange('')}
-        />
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
+          <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ReturnType<typeof useColors>) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: c.background,
     borderRadius: 8,
     paddingHorizontal: 10,
     height: 40,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
   icon: { marginRight: 6 },
   input: {
     flex: 1,
     fontSize: 15,
-    color: COLORS.text,
+    color: c.text,
     paddingVertical: 0,
   },
 });

@@ -36,6 +36,7 @@ const hi: TranslationMap = {
   'poojaDetail.discardMessage': 'आपने असहेज की गई मात्राएं दर्ज की हैं।',
   'poojaDetail.discard': 'रद्द करें',
   'poojaDetail.noSelection': 'कम से कम एक वस्तु चुनें',
+  'poojaDetail.clearAll': 'सभी साफ़ करें',
   'poojaDetail.greetingLabel': 'अभिवादन',
   'poojaDetail.messageLabel': 'संदेश पूर्वावलोकन',
 
@@ -68,6 +69,8 @@ const hi: TranslationMap = {
 
   'alert.deleteTitle': 'वस्तु हटाएं?',
   'alert.deleteMessage': 'क्या आप वाकई "{name}" को हटाना चाहते हैं?',
+  'alert.deletePoojaTitle': 'पूजा हटाएं?',
+  'alert.deletePoojaMessage': 'क्या आप वाकई "{name}" और इसकी सभी वस्तुओं को हटाना चाहते हैं?',
   'alert.clearTitle': 'सूची साफ़ करें?',
   'alert.clearMessage': 'यह सभी वस्तुओं को हटा देगा।',
   'alert.deleteConfirm': 'हटाएं',
@@ -87,6 +90,10 @@ const hi: TranslationMap = {
   'toast.listCleared': 'सूची साफ़ की गई',
 
   'settings.managePoojas': 'पूजाओं का प्रबंधन करें',
+
+  'error.title': 'कुछ गलत हो गया',
+  'error.unknown': 'एक अप्रत्याशित त्रुटि हुई',
+  'error.retry': 'पुनः प्रयास करें',
 };
 
 export default hi;

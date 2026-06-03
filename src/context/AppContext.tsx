@@ -9,6 +9,7 @@ import {
 } from '../utils/storage';
 import { generateId } from '../utils/id';
 import { getNamesForEdit, getItemNames } from '../utils/nameUtils';
+import { TOAST_DURATION } from '../utils/constants';
 import type { Language } from '../i18n/types';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -19,12 +20,14 @@ type AppContextType = {
   loading: boolean;
   toast: { message: string; type: ToastType } | null;
   showToast: (message: string, type: ToastType) => void;
-  addPooja: (name: string, language: Language) => { success: boolean; error?: string };
-  renamePooja: (id: string, name: string, language: Language) => { success: boolean; error?: string };
-  deletePooja: (id: string) => void;
-  addPoojaItem: (poojaId: string, name: string, language: Language) => { success: boolean; error?: string };
-  renamePoojaItem: (id: string, newName: string, language: Language) => { success: boolean; error?: string };
-  deletePoojaItem: (id: string) => void;
+  addPooja: (name: string) => Promise<{ success: boolean; error?: string }>;
+  renamePooja: (id: string, name: string, language: Language) => Promise<{ success: boolean; error?: string }>;
+  deletePooja: (id: string) => Promise<{ success: boolean }>;
+  addPoojaItem: (poojaId: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  renamePoojaItem: (id: string, newName: string, language: Language) => Promise<{ success: boolean; error?: string }>;
+  deletePoojaItem: (id: string) => Promise<{ success: boolean }>;
+  movePooja: (index: number, direction: 'up' | 'down') => Promise<boolean>;
+  movePoojaItem: (poojaId: string, index: number, direction: 'up' | 'down') => Promise<boolean>;
   getPoojaItems: (poojaId: string) => PoojaItem[];
   getPoojaItemCount: (poojaId: string) => number;
   refresh: () => Promise<void>;
@@ -42,7 +45,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((message: string, type: ToastType) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ message, type });
-    toastTimer.current = setTimeout(() => setToast(null), 2500);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_DURATION);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -66,18 +69,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [showToast]);
 
-  const syncPoojas = useCallback(async (updated: Pooja[]) => {
+  const syncPoojas = useCallback(async (updated: Pooja[]): Promise<boolean> => {
     setPoojas(updated);
-    await savePoojas(updated);
-  }, []);
+    const ok = await savePoojas(updated);
+    if (!ok) {
+      showToast('Failed to save changes', 'error');
+      refresh();
+    }
+    return ok;
+  }, [showToast, refresh]);
 
-  const syncPoojaItems = useCallback(async (updated: Record<string, PoojaItem[]>) => {
+  const syncPoojaItems = useCallback(async (updated: Record<string, PoojaItem[]>): Promise<boolean> => {
     setPoojaItems(updated);
-    await savePoojaItems(updated);
-  }, []);
+    const ok = await savePoojaItems(updated);
+    if (!ok) {
+      showToast('Failed to save changes', 'error');
+      refresh();
+    }
+    return ok;
+  }, [showToast, refresh]);
 
   const addPooja = useCallback(
-    (name: string, _language: Language): { success: boolean; error?: string } => {
+    async (name: string): Promise<{ success: boolean; error?: string }> => {
       const trimmed = name.trim();
       if (!trimmed) return { success: false, error: 'Please enter a pooja name' };
 
@@ -91,23 +104,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         nameTa: names.nameTa,
         nameHi: names.nameHi,
       };
-      syncPoojas([...poojas, newPooja]);
-      return { success: true };
+      const ok = await syncPoojas([...poojas, newPooja]);
+      return { success: ok };
     },
     [poojas, syncPoojas],
   );
 
   const renamePooja = useCallback(
-    (id: string, name: string, language: Language): { success: boolean; error?: string } => {
+    async (id: string, name: string, language: Language): Promise<{ success: boolean; error?: string }> => {
       const trimmed = name.trim();
       if (!trimmed) return { success: false, error: 'Name cannot be empty' };
 
-      if (language === 'en') {
-        const duplicate = poojas.some(
-          (p) => p.id !== id && p.nameEn.toLowerCase() === trimmed.toLowerCase(),
-        );
-        if (duplicate) return { success: false, error: 'A pooja with this name already exists' };
-      }
+      const duplicate = poojas.some((p) => {
+        if (p.id === id) return false;
+        if (language === 'ta') return p.nameTa?.toLowerCase() === trimmed.toLowerCase();
+        if (language === 'hi') return p.nameHi?.toLowerCase() === trimmed.toLowerCase();
+        return p.nameEn.toLowerCase() === trimmed.toLowerCase();
+      });
+      if (duplicate) return { success: false, error: 'A pooja with this name already exists' };
 
       const updated = poojas.map((p) => {
         if (p.id !== id) return p;
@@ -115,25 +129,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (language === 'hi') return { ...p, nameHi: trimmed };
         return { ...p, nameEn: trimmed };
       });
-      syncPoojas(updated);
-      return { success: true };
+      const ok = await syncPoojas(updated);
+      return { success: ok };
     },
     [poojas, syncPoojas],
   );
 
   const deletePooja = useCallback(
-    (id: string) => {
+    async (id: string): Promise<{ success: boolean }> => {
       const filtered = poojas.filter((p) => p.id !== id);
-      syncPoojas(filtered);
+      const { [id]: _removed, ...restItems } = poojaItems;
 
-      const { [id]: _, ...rest } = poojaItems;
-      syncPoojaItems(rest);
+      setPoojas(filtered);
+      setPoojaItems(restItems);
+
+      const [poojaOk, itemsOk] = await Promise.all([
+        savePoojas(filtered),
+        savePoojaItems(restItems),
+      ]);
+
+      if (!poojaOk || !itemsOk) {
+        showToast('Failed to save changes', 'error');
+        refresh();
+        return { success: false };
+      }
+
+      return { success: true };
     },
-    [poojas, poojaItems, syncPoojas, syncPoojaItems],
+    [poojas, poojaItems, showToast, refresh],
   );
 
   const addPoojaItem = useCallback(
-    (poojaId: string, name: string, _language: Language): { success: boolean; error?: string } => {
+    async (poojaId: string, name: string): Promise<{ success: boolean; error?: string }> => {
       const trimmed = name.trim();
       if (!trimmed) return { success: false, error: 'Please enter an item name' };
 
@@ -151,17 +178,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         nameTa: names.nameTa,
         nameHi: names.nameHi,
       };
-      syncPoojaItems({
+      const ok = await syncPoojaItems({
         ...poojaItems,
         [poojaId]: [...existing, newItem],
       });
-      return { success: true };
+      return { success: ok };
     },
     [poojaItems, syncPoojaItems],
   );
 
   const renamePoojaItem = useCallback(
-    (id: string, newName: string, language: Language): { success: boolean; error?: string } => {
+    async (id: string, newName: string, language: Language): Promise<{ success: boolean; error?: string }> => {
       const trimmed = newName.trim();
       if (!trimmed) return { success: false, error: 'Name cannot be empty' };
 
@@ -172,14 +199,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const targetItem = items.find((i) => i.id === id);
         if (targetItem) {
           foundPoojaId = pid;
-          if (language === 'en') {
-            const duplicate = items.some(
-              (i) => i.id !== id && i.nameEn.toLowerCase() === trimmed.toLowerCase(),
-            );
-            if (duplicate) {
-              return { success: false, error: 'An item with this name already exists' };
-            }
+
+          const duplicate = items.some((i) => {
+            if (i.id === id) return false;
+            if (language === 'ta') return i.nameTa?.toLowerCase() === trimmed.toLowerCase();
+            if (language === 'hi') return i.nameHi?.toLowerCase() === trimmed.toLowerCase();
+            return i.nameEn.toLowerCase() === trimmed.toLowerCase();
+          });
+          if (duplicate) {
+            return { success: false, error: 'An item with this name already exists' };
           }
+
           updated[pid] = items.map((i) => {
             if (i.id !== id) return i;
             if (language === 'ta') return { ...i, nameTa: trimmed };
@@ -193,19 +223,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (!foundPoojaId) return { success: false, error: 'Item not found' };
 
-      syncPoojaItems(updated);
-      return { success: true };
+      const ok = await syncPoojaItems(updated);
+      return { success: ok };
     },
     [poojaItems, syncPoojaItems],
   );
 
   const deletePoojaItem = useCallback(
-    (id: string) => {
+    async (id: string): Promise<{ success: boolean }> => {
       const updated: Record<string, PoojaItem[]> = {};
+      let found = false;
       for (const [pid, items] of Object.entries(poojaItems)) {
-        updated[pid] = items.filter((i) => i.id !== id);
+        const filtered = items.filter((i) => i.id !== id);
+        if (filtered.length !== items.length) found = true;
+        updated[pid] = filtered;
       }
-      syncPoojaItems(updated);
+      if (!found) return { success: false };
+
+      const ok = await syncPoojaItems(updated);
+      return { success: ok };
+    },
+    [poojaItems, syncPoojaItems],
+  );
+
+  const movePooja = useCallback(
+    async (index: number, direction: 'up' | 'down'): Promise<boolean> => {
+      if (index < 0 || index >= poojas.length) return false;
+      if (direction === 'up' && index === 0) return false;
+      if (direction === 'down' && index === poojas.length - 1) return false;
+
+      const updated = [...poojas];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      [updated[index], updated[swapIndex]] = [updated[swapIndex], updated[index]];
+      return syncPoojas(updated);
+    },
+    [poojas, syncPoojas],
+  );
+
+  const movePoojaItem = useCallback(
+    async (poojaId: string, index: number, direction: 'up' | 'down'): Promise<boolean> => {
+      const items = poojaItems[poojaId] || [];
+      if (index < 0 || index >= items.length) return false;
+      if (direction === 'up' && index === 0) return false;
+      if (direction === 'down' && index === items.length - 1) return false;
+
+      const updatedItems = [...items];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      [updatedItems[index], updatedItems[swapIndex]] = [updatedItems[swapIndex], updatedItems[index]];
+      return syncPoojaItems({ ...poojaItems, [poojaId]: updatedItems });
     },
     [poojaItems, syncPoojaItems],
   );
@@ -238,6 +303,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addPoojaItem,
         renamePoojaItem,
         deletePoojaItem,
+        movePooja,
+        movePoojaItem,
         getPoojaItems,
         getPoojaItemCount,
         refresh,

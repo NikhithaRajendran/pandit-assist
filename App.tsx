@@ -1,12 +1,14 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View, StatusBar, Platform } from 'react-native';
+import { ActivityIndicator, View, StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AppProvider, useApp } from './src/context/AppContext';
 import { LanguageProvider, useLanguage } from './src/i18n';
-import { COLORS } from './src/utils/constants';
+import { COLORS, DARK_COLORS } from './src/utils/constants';
+import { useColors } from './src/utils/useColors';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from './src/components/Toast';
 import HomeScreen from './src/screens/HomeScreen';
 import PoojaDetailScreen from './src/screens/PoojaDetailScreen';
@@ -29,10 +31,12 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainNavigator() {
+  const colors = useColors();
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.primary },
+        headerStyle: { backgroundColor: colors.primary },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '700', fontSize: 18 },
       }}
@@ -53,32 +57,35 @@ function MainNavigator() {
 
 function AppContent() {
   const { loading } = useApp();
+  const { t } = useLanguage();
+  const colors = useColors();
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <>
+    <ErrorBoundary t={t}>
       <Toast />
       <NavigationContainer>
         <MainNavigator />
       </NavigationContainer>
-    </>
+    </ErrorBoundary>
   );
 }
 
 function LanguageGate({ children }: { children: React.ReactNode }) {
   const { language, initialLoading } = useLanguage();
+  const colors = useColors();
 
   if (initialLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -91,12 +98,15 @@ function LanguageGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+
   return (
     <SafeAreaProvider>
       <LanguageProvider>
         <LanguageGate>
           <AppProvider>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? DARK_COLORS.primary : COLORS.primary} />
             <AppContent />
           </AppProvider>
         </LanguageGate>
@@ -104,12 +114,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-  },
-});
