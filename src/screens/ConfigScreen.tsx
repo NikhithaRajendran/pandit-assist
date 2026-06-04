@@ -4,13 +4,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -33,7 +33,7 @@ export default function ConfigScreen() {
     getPoojaItemCount,
     showToast,
     refresh,
-    movePooja,
+    reorderPooja,
   } = useApp();
   const { t, getName, language } = useLanguage();
   const navigation = useNavigation<Nav>();
@@ -82,7 +82,18 @@ export default function ConfigScreen() {
     } finally {
       isSubmitting.current = false;
     }
-  }, [addPooja, newPoojaName, showToast, t, language]);
+  },     [addPooja, newPoojaName, showToast, t, language]);
+
+  const handleDragEnd = useCallback(
+    ({ from, to }: { from: number; to: number }) => {
+      if (from === to) return;
+      // Map filtered indices back to original indices
+      const origFrom = poojas.findIndex((p) => p.id === filteredPoojas[from].id);
+      const origTo = poojas.findIndex((p) => p.id === filteredPoojas[to].id);
+      reorderPooja(origFrom, origTo);
+    },
+    [poojas, filteredPoojas, reorderPooja],
+  );
 
   const handleRename = useCallback(
     async (id: string, name: string): Promise<{ success: boolean; error?: string }> => {
@@ -106,12 +117,7 @@ export default function ConfigScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
+      <View style={styles.screen}>
         <View style={styles.addRow}>
           <TextInput
             style={styles.addInput}
@@ -141,49 +147,55 @@ export default function ConfigScreen() {
           </View>
         )}
 
-        {filteredPoojas.length === 0 && poojas.length > 0 && (
-          <View style={styles.emptyView}>
-            <Ionicons name="search-outline" size={40} color={colors.textSecondary} />
-            <Text style={styles.emptyText}>{t('config.emptySearch')}</Text>
-          </View>
-        )}
-
-        {filteredPoojas.map((pooja, _filteredIdx) => {
-          const origIdx = poojas.findIndex((p) => p.id === pooja.id);
-          return (
-            <InlineEditRow
-              key={pooja.id}
-              name={getName(pooja)}
-              editValue={getName(pooja)}
-              onSave={(newName) => handleRename(pooja.id, newName)}
-              onDelete={() => handleDelete(pooja.id)}
-              badge={{ text: `(${getPoojaItemCount(pooja.id)})` }}
-              confirmTitleKey="alert.deletePoojaTitle"
-              confirmMessageKey="alert.deletePoojaMessage"
-              secondaryAction={{
-                label: t('config.itemsButton'),
-                onPress: () =>
-                  navigation.navigate('PoojaItemsConfig', {
-                    poojaId: pooja.id,
-                    poojaName: pooja.nameEn,
-                  }),
-              }}
-              onMoveUp={origIdx > 0 ? () => movePooja(origIdx, 'up') : undefined}
-              onMoveDown={origIdx < poojas.length - 1 ? () => movePooja(origIdx, 'down') : undefined}
-              t={t}
-            />
-          );
-        })}
+        <DraggableFlatList
+          data={filteredPoojas}
+          keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          onDragEnd={handleDragEnd}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+          ListEmptyComponent={
+            poojas.length > 0 ? (
+              <View style={styles.emptyView}>
+                <Ionicons name="search-outline" size={40} color={colors.textSecondary} />
+                <Text style={styles.emptyText}>{t('config.emptySearch')}</Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item, drag }: RenderItemParams<typeof filteredPoojas[0]>) => (
+            <View style={item === undefined ? { opacity: 0 } : undefined}>
+              <InlineEditRow
+                name={getName(item)}
+                editValue={getName(item)}
+                onSave={(newName) => handleRename(item.id, newName)}
+                onDelete={() => handleDelete(item.id)}
+                badge={{ text: `(${getPoojaItemCount(item.id)})` }}
+                confirmTitleKey="alert.deletePoojaTitle"
+                confirmMessageKey="alert.deletePoojaMessage"
+                secondaryAction={{
+                  label: t('config.itemsButton'),
+                  onPress: () =>
+                    navigation.navigate('PoojaItemsConfig', {
+                      poojaId: item.id,
+                      poojaName: item.nameEn,
+                    }),
+                }}
+                drag={drag}
+                t={t}
+              />
+            </View>
+          )}
+        />
 
         <View style={{ height: 40 }} />
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const makeStyles = (c: ReturnType<typeof useColors>) => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: c.background },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
+  screen: { flex: 1, backgroundColor: c.background, paddingHorizontal: 16, paddingTop: 16 },
+  scrollContent: { paddingBottom: 40 },
 
   addRow: { flexDirection: 'row', gap: 10 },
   addInput: {

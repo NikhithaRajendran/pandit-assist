@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, View, StatusBar, useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -102,15 +103,17 @@ export default function App() {
   const isDark = scheme === 'dark';
 
   return (
-    <SafeAreaProvider>
-      <LanguageProvider>
-        <LanguageGate>
-          <AppProvider>
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? DARK_COLORS.primary : COLORS.primary} />
-            <AppContent />
-          </AppProvider>
-        </LanguageGate>
-      </LanguageProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <LanguageProvider>
+          <LanguageGate>
+            <AppProvider>
+              <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? DARK_COLORS.primary : COLORS.primary} />
+              <AppContent />
+            </AppProvider>
+          </LanguageGate>
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

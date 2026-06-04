@@ -13,11 +13,10 @@ type Props = {
   t?: (key: string, params?: Record<string, string>) => string;
   confirmTitleKey?: string;
   confirmMessageKey?: string;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+  drag?: () => void;
 };
 
-export default function InlineEditRow({ name, editValue, onSave, onDelete, secondaryAction, badge, t, confirmTitleKey = 'alert.deleteTitle', confirmMessageKey = 'alert.deleteMessage', onMoveUp, onMoveDown }: Props) {
+export default function InlineEditRow({ name, editValue, onSave, onDelete, secondaryAction, badge, t, confirmTitleKey = 'alert.deleteTitle', confirmMessageKey = 'alert.deleteMessage', drag }: Props) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(editValue ?? name);
   const inputRef = useRef<TextInput>(null);
@@ -57,6 +56,18 @@ export default function InlineEditRow({ name, editValue, onSave, onDelete, secon
 
   return (
     <View style={styles.container}>
+      {drag && !editing && (
+        <TouchableOpacity
+          onLongPress={drag}
+          delayLongPress={200}
+          style={styles.dragHandle}
+          accessibilityRole="button"
+          accessibilityLabel="Drag to reorder"
+        >
+          <Ionicons name="reorder-two-outline" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      )}
+
       {editing ? (
         <TextInput
           ref={inputRef}
@@ -110,26 +121,6 @@ export default function InlineEditRow({ name, editValue, onSave, onDelete, secon
           </>
         ) : (
           <>
-            {onMoveUp && (
-              <TouchableOpacity
-                onPress={onMoveUp}
-                style={styles.actionBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Move up"
-              >
-                <Ionicons name="chevron-up" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-            {onMoveDown && (
-              <TouchableOpacity
-                onPress={onMoveDown}
-                style={styles.actionBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Move down"
-              >
-                <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
               onPress={handleStartEdit}
               style={styles.actionBtn}
@@ -179,4 +170,5 @@ const makeStyles = (c: ReturnType<typeof useColors>) => StyleSheet.create({
   badge: { fontSize: 14, color: c.textSecondary, marginRight: 8 },
   actionBtn: { paddingHorizontal: 6, paddingVertical: 4 },
   secondaryLabel: { color: c.primary, fontSize: 14, fontWeight: '600' },
+  dragHandle: { paddingHorizontal: 4, marginRight: 4 },
 });

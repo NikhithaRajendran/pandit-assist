@@ -28,6 +28,8 @@ type AppContextType = {
   deletePoojaItem: (id: string) => Promise<{ success: boolean }>;
   movePooja: (index: number, direction: 'up' | 'down') => Promise<boolean>;
   movePoojaItem: (poojaId: string, index: number, direction: 'up' | 'down') => Promise<boolean>;
+  reorderPooja: (fromIndex: number, toIndex: number) => Promise<boolean>;
+  reorderPoojaItem: (poojaId: string, fromIndex: number, toIndex: number) => Promise<boolean>;
   getPoojaItems: (poojaId: string) => PoojaItem[];
   getPoojaItemCount: (poojaId: string) => number;
   refresh: () => Promise<void>;
@@ -260,6 +262,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [poojas, syncPoojas],
   );
 
+  const reorderPooja = useCallback(
+    async (fromIndex: number, toIndex: number): Promise<boolean> => {
+      if (fromIndex < 0 || fromIndex >= poojas.length || toIndex < 0 || toIndex >= poojas.length) {
+        return false;
+      }
+      const updated = [...poojas];
+      const [item] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, item);
+      return syncPoojas(updated);
+    },
+    [poojas, syncPoojas],
+  );
+
+  const reorderPoojaItem = useCallback(
+    async (poojaId: string, fromIndex: number, toIndex: number): Promise<boolean> => {
+      const items = poojaItems[poojaId] || [];
+      if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) {
+        return false;
+      }
+      const updatedItems = [...items];
+      const [item] = updatedItems.splice(fromIndex, 1);
+      updatedItems.splice(toIndex, 0, item);
+      return syncPoojaItems({ ...poojaItems, [poojaId]: updatedItems });
+    },
+    [poojaItems, syncPoojaItems],
+  );
+
   const movePoojaItem = useCallback(
     async (poojaId: string, index: number, direction: 'up' | 'down'): Promise<boolean> => {
       const items = poojaItems[poojaId] || [];
@@ -305,6 +334,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deletePoojaItem,
         movePooja,
         movePoojaItem,
+        reorderPooja,
+        reorderPoojaItem,
         getPoojaItems,
         getPoojaItemCount,
         refresh,
