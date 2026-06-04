@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, View, StatusBar, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { COLORS, DARK_COLORS } from './src/utils/constants';
 import { useColors } from './src/utils/useColors';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from './src/components/Toast';
+import AnimatedSplash from './src/components/AnimatedSplash';
 import HomeScreen from './src/screens/HomeScreen';
 import PoojaDetailScreen from './src/screens/PoojaDetailScreen';
 import ConfigScreen from './src/screens/ConfigScreen';
@@ -101,6 +102,7 @@ function LanguageGate({ children }: { children: React.ReactNode }) {
 export default function App() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -108,8 +110,11 @@ export default function App() {
         <LanguageProvider>
           <LanguageGate>
             <AppProvider>
-              <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? DARK_COLORS.primary : COLORS.primary} />
-              <AppContent />
+              <View style={{ flex: 1, position: 'relative' }}>
+                <StatusBar barStyle={splashDone ? (isDark ? 'light-content' : 'dark-content') : 'light-content'} backgroundColor={isDark ? DARK_COLORS.primary : COLORS.primary} />
+                <AppContent />
+                {!splashDone && <AnimatedSplash onFinish={() => setSplashDone(true)} />}
+              </View>
             </AppProvider>
           </LanguageGate>
         </LanguageProvider>

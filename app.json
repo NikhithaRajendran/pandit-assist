@@ -7,6 +7,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
+      "image": "./assets/splash-screen.png",
+      "resizeMode": "contain",
       "backgroundColor": "#FF6F00"
     },
     "ios": {
@@ -33,7 +35,8 @@
     },
     "plugins": [
       "expo-status-bar",
-      "expo-localization"
+      "expo-localization",
+      "expo-splash-screen"
     ]
   }
 }
